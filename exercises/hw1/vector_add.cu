@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 
 // error checking macro
 #define cudaCheckErrors(msg) \
@@ -27,7 +28,7 @@ __global__ void vadd(const float *A, const float *B, float *C, int ds){
 
 bool check(const float *a, const float *b, const float *c, int len){
   for(int i=0;i<len;i++){
-    if(abs((a[i] + b[i]) - c[i]) > EPS){
+    if(fabs((a[i] + b[i]) - c[i]) > EPS){
       printf("Mismatch at index[%d]: answer=%f, operation=%f\n", i, a[i]+b[i], c[i]);
       return false;
     }
@@ -79,4 +80,3 @@ int main(){
   delete[] h_C;
   return 0;
 }
-  
