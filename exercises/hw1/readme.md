@@ -58,4 +58,20 @@ This example introduces 2D threadblock/grid indexing, something we did not cover
 
 This code includes built-in error checking, so a correct result is indicated by the program.
 
+### Modifications
 
+I modified the code to generate random elements for the input matrices. Additionally, I implemented a CPU-based matrix multiplication function for comparison purposes.
+Note: The current version only supports square matrices on the GPU.
+
+Execute:
+``` bash
+nvcc -o matrix_mul matrix_mul.cu
+.\matrix_mul.exe
+```
+
+Output will be like:
+``` bash
+CPU computation time: 253.20 seconds
+GPU computation time: 0.14 seconds
+Success!
+```
