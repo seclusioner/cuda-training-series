@@ -1,7 +1,11 @@
+/*
+Matrix multiplication for square matrix
+*/
 #include <stdio.h>
 
 // these are just for timing measurments
-#include <time.h>
+#include <cstdlib>  // rand()
+#include <ctime>    // time()
 
 // error checking macro
 #define cudaCheckErrors(msg) \
@@ -19,8 +23,7 @@
 
 const int DSIZE = 4096;
 const int block_size = 16;  // CUDA maximum is 1024 *total* threads in block
-const float A_val = 1.0f;
-const float B_val = 2.0f;
+const float EPS = 1e-5;
 
 // matrix multiply (naive) kernel: C = A * B
 __global__ void mmul(const float *A, const float *B, float *C, int ds) {
@@ -31,35 +34,69 @@ __global__ void mmul(const float *A, const float *B, float *C, int ds) {
   if ((idx < ds) && (idy < ds)){
     float temp = 0;
     for (int i = 0; i < ds; i++)
-      temp += A[FIXME*ds+i] * B[i*ds+FIXME];   // dot product of row and column
+      temp += A[idy*ds+i] * B[i*ds+idx];   // dot product of row and column
     C[idy*ds+idx] = temp;
   }
 }
 
-int main(){
+void mmul_host(const float *A, const float *B, float *C, int ds){
+  int m, n, p; // m x p = m x n @ n x p
+  m = n = p = ds; // square matrix
+  for(auto i=0;i<m;i++){
+    for(auto j=0;j<p;j++){
+      for(auto k=0;k<n;k++){
+        C[i*p+j] += A[i*n+k] * B[k*p+j];
+      }
+    }
+  }
+}
 
-  float *h_A, *h_B, *h_C, *d_A, *d_B, *d_C;
+void printMatrix(float* matrix, int rows, int cols){
+    for (int i = 0; i < rows; i++){
+        printf("[");
+        for (int j = 0; j < cols; j++){
+          printf("%.3f, ", matrix[i*cols+j]);
+        }
+        printf("],\n");
+    }
+}
+
+
+int main(){
+  srand(time(0));
+  
+  float *h_A, *h_B, *h_C, *h_C2, *d_A, *d_B, *d_C;
 
   // these are just for timing
   clock_t t0, t1, t2;
   double t1sum=0.0;
   double t2sum=0.0;
 
-  // start timing
-  t0 = clock();
-
   h_A = new float[DSIZE*DSIZE];
   h_B = new float[DSIZE*DSIZE];
   h_C = new float[DSIZE*DSIZE];
+  h_C2 = new float[DSIZE*DSIZE];
   for (int i = 0; i < DSIZE*DSIZE; i++){
-    h_A[i] = A_val;
-    h_B[i] = B_val;
-    h_C[i] = 0;}
+    h_A[i] = rand() % 10;
+    h_B[i] = rand() % 10;
+    h_C[i] = 0;
+    h_C2[i] = 0;
+  }
 
-  // Initialization timing
+  // printf("Matrix A:\n");
+  // printMatrix(h_A, DSIZE, DSIZE);
+  // printf("Matrix B:\n");
+  // printMatrix(h_B, DSIZE, DSIZE);
+  // printf("Matrix C (from CPU):\n");
+  t0 = clock();
+
+  mmul_host(h_A, h_B, h_C, DSIZE);
+  // printMatrix(h_C, DSIZE, DSIZE);
+  
+  // CPU timing
   t1 = clock();
   t1sum = ((double)(t1-t0))/CLOCKS_PER_SEC;
-  printf("Init took %f seconds.  Begin compute\n", t1sum);
+  printf ("CPU computation time: %.2f seconds\n", t1sum);
 
   // Allocate device memory and copy input data over to GPU
   cudaMalloc(&d_A, DSIZE*DSIZE*sizeof(float));
@@ -76,24 +113,41 @@ int main(){
   dim3 block(block_size, block_size);  // dim3 variable holds 3 dimensions
   dim3 grid((DSIZE+block.x-1)/block.x, (DSIZE+block.y-1)/block.y);
   mmul<<<grid, block>>>(d_A, d_B, d_C, DSIZE);
+  cudaDeviceSynchronize();
   cudaCheckErrors("kernel launch failure");
 
   // Cuda processing sequence step 2 is complete
 
   // Copy results back to host
-  cudaMemcpy(h_C, d_C, DSIZE*DSIZE*sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_C2, d_C, DSIZE*DSIZE*sizeof(float), cudaMemcpyDeviceToHost);
+
+  // printf("Matrix C (from GPU):\n");
+  // printMatrix(h_C2, DSIZE, DSIZE);
 
   // GPU timing
   t2 = clock();
   t2sum = ((double)(t2-t1))/CLOCKS_PER_SEC;
-  printf ("Done. Compute took %f seconds\n", t2sum);
+  printf ("GPU computation time: %.2f seconds\n", t2sum);
 
   // Cuda processing sequence step 3 is complete
-
   // Verify results
   cudaCheckErrors("kernel execution failure or cudaMemcpy H2D failure");
-  for (int i = 0; i < DSIZE*DSIZE; i++) if (h_C[i] != A_val*B_val*DSIZE) {printf("mismatch at index %d, was: %f, should be: %f\n", i, h_C[i], A_val*B_val*DSIZE); return -1;}
-  printf("Success!\n"); 
+  for (int i = 0; i < DSIZE*DSIZE; i++) {
+    if (fabs(h_C[i] - h_C2[i]) > EPS) {
+        printf("Mismatch at index %d, was: %f, should be: %f\n", i, h_C2[i], h_C[i]);
+        return -1;
+    }
+}
+  printf("Success!\n");
+
+  cudaFree(d_A);
+  cudaFree(d_B);
+  cudaFree(d_C);
+
+  free(h_A);
+  free(h_B);
+  free(h_C);
+  free(h_C2);
 
   return 0;
 }
