@@ -6,45 +6,16 @@ These exercises will help reinforce the concept of Shared Memory on the GPU.
 
 Your first task is to create a 1D stencil application that uses shared memory. The code skeleton is provided in *stencil_1d.cu*. Edit that file, paying attention to the FIXME locations. The code will verify output and report any errors.
 
-After editing the code, compile it using the following:
-
-```
-module load cuda
+Execute:
+``` bash
 nvcc -o stencil_1d stencil_1d.cu
+.\stencil_1d.exe
 ```
 
-The module load command selects a CUDA compiler for your use. The module load command only needs to be done once per session/login. *nvcc* is the CUDA compiler invocation command. The syntax is generally similar to gcc/g++.
-
-To run your code, we will use an LSF command:
-
+Sample output:
+``` bash
+Success!
 ```
-bsub -W 10 -nnodes 1 -P <allocation_ID> -Is jsrun -n1 -a1 -c1 -g1 ./stencil_1d
-```
-
-Alternatively, you may want to create an alias for your *bsub* command in order to make subsequent runs easier:
-
-```
-alias lsfrun='bsub -W 10 -nnodes 1 -P <allocation_ID> -Is jsrun -n1 -a1 -c1 -g1'
-lsfrun ./stencil_1d
-```
-
-To run your code at NERSC on Cori, we can use Slurm:
-
-```
-module load esslurm
-srun -C gpu -N 1 -n 1 -t 10 -A m3502 --reservation cuda_training --gres=gpu:1 -c 10 ./stencil_1d
-```
-
-Allocation `m3502` is a custom allocation set up on Cori for this training series, and should be available to participants who registered in advance. If you cannot submit using this allocation, but already have access to another allocation that grants access to the Cori GPU nodes (such as m1759), you may use that instead.
-
-If you prefer, you can instead reserve a GPU in an interactive session, and then run an executable any number of times while the Slurm allocation is active (this is recommended if there are enough available nodes):
-
-```
-salloc -C gpu -N 1 -t 60 -A m3502 --reservation cuda_training --gres=gpu:1 -c 10
-srun -n 1 ./stencil_1d
-```
-
-Note that you only need to `module load esslurm` once per login session; this is what enables you to submit to the Cori GPU nodes.
 
 If you have trouble, you can look at *stencil_1d_solution* for a complete example.
 
