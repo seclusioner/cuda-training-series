@@ -60,18 +60,25 @@ This code includes built-in error checking, so a correct result is indicated by 
 
 ### Modifications
 
-I modified the code to generate random elements for the input matrices. Additionally, I implemented a CPU-based matrix multiplication function for comparison purposes.
-Note: The current version only supports square matrices on the GPU.
+* Randomly initializes matrices A and B using values between 0–9.
+* Modified the code to support arbitrary (non-square) matrix dimensions by passing <m> <n> <p> as command-line arguments.
+* Added a CPU-based matrix multiplication function `mmul_host` for correctness verification.
+* Verifies GPU results against CPU results using a small epsilon (EPS = 1e-5) for floating point accuracy.
 
 Execute:
 ``` bash
 nvcc -o matrix_mul matrix_mul.cu
-.\matrix_mul.exe
+.\matrix_mul.exe <m> <n> <p>
+```
+Example:
+``` bash
+.\matrix_mul.exe 512 1024 2048
 ```
 
-Output will be like:
+Sample output:
 ``` bash
-CPU computation time: 253.20 seconds
-GPU computation time: 0.14 seconds
-Success!
+512 by 1024 multiply 1024 by 2048
+CPU computation time: 2.79 seconds
+GPU computation time: 0.10 seconds
+passed!
 ```
